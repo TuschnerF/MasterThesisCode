@@ -1,3 +1,3 @@
-from Problems.problem import Problem
-from Problems.problem_pat import Problem_PAT
+from problems.problem import Problem
+from problems.problem_pat import Problem_PAT
 

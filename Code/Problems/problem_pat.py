@@ -5,7 +5,7 @@ import numpy as np
 from numpy.typing import NDArray
 import matplotlib.pyplot as plt
 from scipy.ndimage import map_coordinates
-from  Problems.problem import Problem
+from  problems.problem import Problem
 
 class Problem_PAT(Problem):
     # Constructor
@@ -19,7 +19,9 @@ class Problem_PAT(Problem):
         # radii: Array of all r for all circles
         radon = np.zeros((len(angles), len(radii)))
         rows, columns = image.shape
-        center = (rows // 2, columns // 2)  # Assume image is centered
+        if rows != columns:
+            raise ValueError("Image not squared")
+        
         n_points_circle = 360
         for i,phi in enumerate(angles):
             for j, r in enumerate(radii):
@@ -28,7 +30,7 @@ class Problem_PAT(Problem):
                 y_circle = (2 + r*np.sin(phi) + r*np.sin(psi)) * rows / 2
                 
                 # bilinear interpolation of the y,y values in the imae
-                sampled_values = map_coordinates(image, [y_circle, x_circle], order=1, mode='constant')
+                sampled_values = map_coordinates(image, [x_circle, y_circle], order=1, mode='constant')
                 
                 # Compute the average value over the sampled points (arc length measure)    	
                 radon[i, j] = np.mean(sampled_values)
