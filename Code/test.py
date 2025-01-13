@@ -1,24 +1,44 @@
-# from skimage.data import shepp_logan_phantom
-# from skimage.transform import resize
 # import matplotlib.pyplot as plt
+from problems.problem_lap import *
 import numpy as np
+import matplotlib.pyplot as plt
+print(int(5.8))
+ur = 0.2
+vr = 0.1
+phi = 0
+cx = 0.1
+cy = 0.0
+q = 10
+p = 180
+n = 30 # regularization parameter
 
-# # Modified Shepp-Logan Phantom erzeugen
-# N = 256  # Bildgröße N x N
-# phantom = shepp_logan_phantom()
+orig = rectangle(ur, vr, phi, cx, cy, p) 
+# plt.figure(figsize=(10, 6))
+# plt.imshow(orig, extent=[-1, 1, -1,1], aspect='auto', cmap='gray', origin='lower')
+# plt.colorbar()
+# plt.show()
+# print(orig)
 
-# # Phantom auf gewünschte Größe anpassen
-# phantom_resized = resize(phantom, (N, N), mode='reflect', anti_aliasing=True)
-# print(phantom.shape)
-# print(phantom_resized.shape)
+sinogram = projrec(ur, vr, phi, cx, cy, q, p)
+reconstruction = filtered_backprojection_paralell(sinogram, q, p, 21, n)
 
-# # Phantom anzeigen
-# plt.imshow(phantom_resized, cmap='gray')
-# plt.title(f'Modified Shepp-Logan Phantom ({N}x{N})')
+# plt.figure(figsize=(10, 6))
+# plt.imshow(reconstruction, extent=[-1, 1, -1,1], aspect='auto', cmap='gray', origin='lower')
 # plt.colorbar()
 # plt.show()
 
-# # Optional: Matrix speichern
-# np.save('/mnt/data/shepp_logan_phantom.npy', phantom_resized)
+fig, axs = plt.subplots(1, 2, figsize=(12, 6))
 
-print(np.array([1,2]))
+# Zeige das erste Bild im ersten Subplot
+im1 = axs[0].imshow(orig, extent=[-1, 1, -1, 1], aspect='auto', cmap='gray', origin='lower')
+axs[0].set_title('Original Image')
+fig.colorbar(im1, ax=axs[0])
+
+# Zeige das zweite Bild im zweiten Subplot
+im2 = axs[1].imshow(reconstruction, extent=[-1, 1, -1, 1], aspect='auto', cmap='gray', origin='lower')
+axs[1].set_title('Reconstruction')
+fig.colorbar(im2, ax=axs[1])
+
+# Zeige die Figur
+plt.tight_layout()
+plt.show()
