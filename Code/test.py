@@ -8,9 +8,9 @@ vr = 0.1
 phi = 0
 cx = 0.1
 cy = 0.0
-q = 10
-p = 180
-n = 30 # regularization parameter
+q = 100
+p = 320
+n = 10000 # regularization parameter
 
 orig = rectangle(ur, vr, phi, cx, cy, p) 
 # plt.figure(figsize=(10, 6))
@@ -20,7 +20,7 @@ orig = rectangle(ur, vr, phi, cx, cy, p)
 # print(orig)
 
 sinogram = projrec(ur, vr, phi, cx, cy, q, p)
-reconstruction = filtered_backprojection_paralell(sinogram, q, p, 21, n)
+reconstruction = filtered_backprojection_paralell(sinogram, q, p, 101, n)
 
 # plt.figure(figsize=(10, 6))
 # plt.imshow(reconstruction, extent=[-1, 1, -1,1], aspect='auto', cmap='gray', origin='lower')

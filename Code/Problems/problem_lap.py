@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 from scipy.ndimage import map_coordinates
 from scipy.special import hyp2f1
 from  problems.problem import Problem
+import math
 
 class Problem_LAP(Problem):
     # Constructor
@@ -59,7 +60,6 @@ def rectangle(ur, vr, phi, cx, cy, p):
                 rect[dim - j - 1, i] = 1  # Flip y-axis to match image convention
 
     return rect
-
 
 def projrec(ur,vr,phi,cx,cy,q,p):
     """
@@ -171,34 +171,39 @@ def filtered_backprojection_paralell(sinogramm, q, p, p_rec, n):
         reconstructed Picture
         shape [p_rec p_rec]
     """
+    #Assert correct shape of sinogramm
     # S1:   Calculate Filter
-    print("S1: Calculation of reconstrction filter")
+    print("S1: Calculation of reconstruction filter")
     eta = np.zeros_like(sinogramm)
-    print(eta.shape)
+    print("eta shape: ", eta.shape)
     v_gamma = kernel_4_11(np.linspace(-2*q,2*q,4*q+1)/q, n)
-    print(np.max(v_gamma))
-    # for j in range(p):
-    #    for k in range(2*q+1):
-    #        for l in range(2*q+1):
-    #            eta[j,k] += 1/q * ( v_gamma[k-l+q] * sinogramm[j,l] ) # Indizes überprüfen!
+    print("max(v_gamma): ", np.max(v_gamma))
     for j in range(p):
-        eta[j] = np.convolve(sinogramm[j], v_gamma, mode='same') / q
+       for k in range(2*q+1):
+           for l in range(2*q+1):
+               eta[j,k] += 1/q * ( v_gamma[k-l+2*q] * sinogramm[j,l] ) # Indizes überprüfen!
     
     # S2:   Calculate reconstruction
     print("S2: Reconstruction for ", p_rec*p_rec, " points")
     res = np.zeros((p_rec,p_rec))
+    k_max = -100000
+    k_min = 100000
     for x1 in range(p_rec):
         for x2 in range(p_rec):
             x = [ 2*x1/(p_rec-1) - 1, 2*x2/(p_rec-1) - 1]
-            if np.sqrt(x[0]**2+x[1]**2)<=1:    
+            if np.sqrt(x[0]**2+x[1]**2)<1:    
                 for j in range(p):
                     # omega = [np.cos(j*np.pi/p),np.sin(j*np.pi/p)]
-                    t = (2*x1/(p_rec-1) - 1)*np.cos(j*np.pi/p) + (2*x2/(p_rec-1) - 1)*np.sin(j*np.pi/p)
+                    t = (2*x1/(p_rec-1) - 1)*np.sin(j*np.pi/p) + (2*x2/(p_rec-1) - 1)*np.cos(j*np.pi/p)
                     t *= q
-                    k = int(t)+q-1
-                    # print("k = ",k)
-                    # print("q = ",p)
-                    sigma = t-k
-                    res[x1,x2] += (np.pi / p) * ( (1-sigma)*eta[j,k] + sigma*eta[j,k+1])
+                    k = math.floor(t)
+                    k_max = max(k,k_max)
+                    k_min = min(k,k_min)
+                    rho = t-k
+                    res[x1,x2] += (np.pi / p) * ( (1-rho)*eta[j,k+q] + rho*eta[j,k+1+q])
+    print("q = ", q)
+    print("k_max = ", k_max)
+    print("k_min = ", k_min)
+    
     print("Reconstruction finished")
     return res
