@@ -8,6 +8,7 @@ from scipy.ndimage import map_coordinates
 from scipy.special import hyp2f1
 from  problems.problem import Problem
 import math
+import time
 
 class Problem_LAP(Problem):
     # Constructor
@@ -148,7 +149,7 @@ def kernel_4_11(s_values,n):
             res[i] = -tmp*hyp2f1(1, 3/2, n+2, 1/(s*s))/(s*s)
     return res
 
-def filtered_backprojection_paralell(sinogramm, q, p, p_rec, n):
+def filtered_backprojection_paralell(sinogramm, q, p, p_rec, n, lr = 1.0):
     """
     Algrorithm 4.16
 
@@ -162,9 +163,11 @@ def filtered_backprojection_paralell(sinogramm, q, p, p_rec, n):
     q : int
         Discretization parameter in s-direction
     p_rec:  int
-            Discretization parameter for reconstruction picture
+        Discretization parameter for reconstruction picture
     n : int
         regularization parameter
+    lr : floor
+        limited radius
 
     Returns:
     res : numpy.ndarray
@@ -172,38 +175,49 @@ def filtered_backprojection_paralell(sinogramm, q, p, p_rec, n):
         shape [p_rec p_rec]
     """
     #Assert correct shape of sinogramm
+    # S0: Limited angle / radius
+    if lr>=0.0 and lr<=1:
+        print("Limited radius with |r|<=", lr)
+        for j in range(2*q+1):
+            if abs((j-q)/q)>=lr:
+                sinogramm[:,j] = 0
+
     # S1:   Calculate Filter
     print("S1: Calculation of reconstruction filter")
+    start_filter = time.perf_counter()
     eta = np.zeros_like(sinogramm)
-    print("eta shape: ", eta.shape)
     v_gamma = kernel_4_11(np.linspace(-2*q,2*q,4*q+1)/q, n)
-    print("max(v_gamma): ", np.max(v_gamma))
     for j in range(p):
        for k in range(2*q+1):
            for l in range(2*q+1):
                eta[j,k] += 1/q * ( v_gamma[k-l+2*q] * sinogramm[j,l] ) # Indizes überprüfen!
-    
+    end_filter = time.perf_counter()
+
+
     # S2:   Calculate reconstruction
     print("S2: Reconstruction for ", p_rec*p_rec, " points")
+    start_reconstruction = time.perf_counter()
     res = np.zeros((p_rec,p_rec))
     k_max = -100000
     k_min = 100000
     for x1 in range(p_rec):
         for x2 in range(p_rec):
             x = [ 2*x1/(p_rec-1) - 1, 2*x2/(p_rec-1) - 1]
-            if np.sqrt(x[0]**2+x[1]**2)<1:    
+            if np.sqrt(x[0]**2+x[1]**2)<1: 
                 for j in range(p):
                     # omega = [np.cos(j*np.pi/p),np.sin(j*np.pi/p)]
-                    t = (2*x1/(p_rec-1) - 1)*np.sin(j*np.pi/p) + (2*x2/(p_rec-1) - 1)*np.cos(j*np.pi/p)
+                    t = (2*x1/(p_rec-1) - 1)*np.sin(j*np.pi/p) + (2*x2/(p_rec-1) - 1)*-np.cos(j*np.pi/p)
                     t *= q
                     k = math.floor(t)
                     k_max = max(k,k_max)
                     k_min = min(k,k_min)
                     rho = t-k
                     res[x1,x2] += (np.pi / p) * ( (1-rho)*eta[j,k+q] + rho*eta[j,k+1+q])
-    print("q = ", q)
-    print("k_max = ", k_max)
-    print("k_min = ", k_min)
-    
+    # norm to max value 1
+    res *= 1 / (np.max(res))                
     print("Reconstruction finished")
+    end_reconstruction = time.perf_counter()
+    print("Elapsed Time:")
+    print("Calculation Filter:", end_filter-start_filter)
+    print("Calculation Reconstruction:", end_reconstruction-start_reconstruction)
     return res
