@@ -8,14 +8,14 @@ vr = 2/3 - np.sqrt(2)/3
 phi = 0.0
 cx = np.sqrt(2)/3
 cy = np.sqrt(2)/3
-q = 60
-p = 180
+q = 250
+p = 500
 n = 1500 # regularization parameter
 p_rec = 151
 
-orig = rectangle(ur, vr, phi, cx, cy, p) 
+orig = draw_rectangle(ur, vr, phi, cx, cy, p) 
 sinogram = projrec(ur, vr, phi, cx, cy, q, p)
-reconstruction = filtered_backprojection_paralell(sinogram, q, p, p_rec, n, 2/3)
+reconstruction = filtered_backprojection_paralell(sinogram, q, p, p_rec, n, la=np.pi/16)
 
 fig, axs = plt.subplots(1, 2, figsize=(12, 6))
 
