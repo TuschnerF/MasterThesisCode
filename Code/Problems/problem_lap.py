@@ -62,7 +62,7 @@ def draw_rectangle(ur, vr, phi, cx, cy, p):
 
     return rect
 
-def draw_ellipse(a,b, cx, cy, p):
+def draw_ellipse(a, b, cx, cy, p):
     """
     Characteristic function of a rectangle in [-1, 1]^2.
 
@@ -84,9 +84,9 @@ def draw_ellipse(a,b, cx, cy, p):
     for i in range(0, 2 * p + 1):
         x = -1 + i * h - cx  # x-coordinate in the grid
         for j in range(0, 2 * p + 1):
-            y = -1 + j * h - cy  # y-coordinate in the grid
+            y = -1 + j * h + cy  # y-coordinate in the grid
             if (x*x/(a*a) + y*y/(b*b)) <= 1:
-                ellipse[i,j] = 1        
+                ellipse[j,i] = 1        
     return ellipse
 
 def projrec(ur,vr,phi,cx,cy,q,p):
@@ -177,11 +177,10 @@ def projellipse(a, b, cx, cy, q, p):
     dim = 2*q+1
     sinogram = np.zeros((p, dim))
     for j in range(p):
-        theta = j*np.pi/q
+        theta = j*np.pi/p
         for i in range(dim):
             r = np.sqrt((a*np.cos(theta))**2 + (b*np.sin(theta))**2)
-            s = (i-q)/q - (cx*np.cos(theta)+cy*np.sin(theta))
-            print(s)
+            s = (i-q)/q + (cx*np.cos(theta)+cy*np.sin(theta))
             if np.abs(s) <= r: 
                 sinogram[j,i] = (2*a*b/r) * (np.sqrt(1-s*s/(r*r))) 
     return sinogram

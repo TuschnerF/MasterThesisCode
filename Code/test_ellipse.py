@@ -3,19 +3,19 @@ from problems.problem_lap import *
 import numpy as np
 import matplotlib.pyplot as plt
 
-a = 0.2
-b = 0.2
+a = 0.3
+b = 0.3
 # phi = 0.0
 cx = 0
 cy = 0
-q = 60
-p = 180
+q = 200
+p = 500
 n = 1500 # regularization parameter
-p_rec = 101
+p_rec = 301
 
 orig = draw_ellipse(a, b, cx, cy, p) 
 sinogram = projellipse(a, b, cx, cy, q, p)
-reconstruction = filtered_backprojection_paralell(sinogram, q, p, p_rec, n )
+reconstruction = filtered_backprojection_paralell(sinogram, q, p, p_rec, n , la=np.pi/4)
 
 fig, axs = plt.subplots(1, 2, figsize=(12, 6))
 
