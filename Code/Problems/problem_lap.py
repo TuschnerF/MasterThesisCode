@@ -206,15 +206,35 @@ def kernel_4_11(s_values,n):
             res[i] = -tmp*hyp2f1(1, 3/2, n+2, 1/(s*s))/(s*s)
     return res
 
-def filter(sinogramm, q, p, n):
+def filter(sinogramm, q, p, n, lr = 1.0, la = 0.0,  cutoff = False):
+    # S0: Limited angle / radius
+    if lr>=0.0 and lr<1.0:
+        print("Limited radius with |r|<=", lr)
+        for j in range(2*q+1):
+            if abs((j-q)/q)>=lr:
+                sinogramm[:,j] = 0
+        if cutoff == True:
+            lr_ = lr-0.1
+            for j in range(2*q+1):
+                r = abs((j-q)/q)
+                if r>=lr_ and r<=lr:
+                    sinogramm[:,j] *= r / (lr_-lr) - lr / ( lr_-lr )
+    if la>0.0 and la<=np.pi:
+        print("Limited angle with |alpha|<=", la)
+        for j in range(p):
+            if j*np.pi/p<= la or j*np.pi/p>=np.pi-la:
+                sinogramm[j,:] = 0
+    # S1:   Calculate Filter
+    print("S1: Calculation of reconstruction filter")
     eta = np.zeros_like(sinogramm)
     v_gamma = kernel_4_11(np.linspace(-2*q,2*q,4*q+1)/q, n)
     for j in range(p):
        for k in range(2*q+1):
            for l in range(2*q+1):
                eta[j,k] += 1/q * ( v_gamma[k-l+2*q] * sinogramm[j,l] )
+    return eta
 
-def filtered_backprojection_paralell(sinogramm, q, p, p_rec, n, lr = 1.0, la = 0.0, cutoff = False):
+def filtered_backprojection_paralell(eta, q, p, p_rec):
     """
     Algrorithm 4.16
 
@@ -244,39 +264,9 @@ def filtered_backprojection_paralell(sinogramm, q, p, p_rec, n, lr = 1.0, la = 0
         shape [p_rec p_rec]
     """
     #Assert correct shape of sinogramm
-    # S0: Limited angle / radius
-    if lr>=0.0 and lr<1.0:
-        print("Limited radius with |r|<=", lr)
-        for j in range(2*q+1):
-            if abs((j-q)/q)>=lr:
-                sinogramm[:,j] = 0
-        if cutoff == True:
-            lr_ = lr-0.1
-            for j in range(2*q+1):
-                r = abs((j-q)/q)
-                if r>=lr_ and r<=lr:
-                    sinogramm[:,j] *= r / (lr_-lr) - lr / ( lr_-lr )
-    if la>0.0 and la<=np.pi:
-        print("Limited angle with |alpha|<=", la)
-        for j in range(p):
-            if j*np.pi/p<= la or j*np.pi/p>=np.pi-la:
-                sinogramm[j,:] = 0
-
-    # S1:   Calculate Filter
-    print("S1: Calculation of reconstruction filter")
-    start_filter = time.perf_counter()
-    eta = np.zeros_like(sinogramm)
-    v_gamma = kernel_4_11(np.linspace(-2*q,2*q,4*q+1)/q, n)
-    for j in range(p):
-       for k in range(2*q+1):
-           for l in range(2*q+1):
-               eta[j,k] += 1/q * ( v_gamma[k-l+2*q] * sinogramm[j,l] )
-    end_filter = time.perf_counter()
-
 
     # S2:   Calculate reconstruction
     print("S2: Reconstruction for ", p_rec*p_rec, " points")
-    start_reconstruction = time.perf_counter()
     res = np.zeros((p_rec,p_rec))
     for x1 in range(p_rec):
         for x2 in range(p_rec):
@@ -291,9 +281,4 @@ def filtered_backprojection_paralell(sinogramm, q, p, p_rec, n, lr = 1.0, la = 0
                     res[x1,x2] += (np.pi / p) * ( (1-rho)*eta[j,k+q] + rho*eta[j,k+1+q])
     # norm to max value 1
     res *= 1 / (np.max(res))                
-    print("Reconstruction finished")
-    end_reconstruction = time.perf_counter()
-    print("Elapsed Time:")
-    print("Calculation Filter:", end_filter-start_filter)
-    print("Calculation Reconstruction:", end_reconstruction-start_reconstruction)
     return res
