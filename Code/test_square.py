@@ -2,20 +2,24 @@
 from problems.problem_lap import *
 import numpy as np
 import matplotlib.pyplot as plt
+import os
 
-ur = 2/3 - np.sqrt(2)/3
-vr = 2/3 - np.sqrt(2)/3
+save_dir = "Figures"  # Define the directory
+os.makedirs(save_dir, exist_ok=True) 
+
+ur = 0.2
+vr = 0.2
 phi = 0.0
-cx = np.sqrt(2)/3
-cy = np.sqrt(2)/3
-q = 250
-p = 500
+cx = 0.25
+cy = 0.25
+q = 40
+p = 80
 n = 1500 # regularization parameter
-p_rec = 151
+p_rec = 101
 
 orig = draw_rectangle(ur, vr, phi, cx, cy, p) 
 sinogram = projrec(ur, vr, phi, cx, cy, q, p)
-reconstruction = filtered_backprojection_paralell(sinogram, q, p, p_rec, n, la=np.pi/16)
+reconstruction = filtered_backprojection_paralell(sinogram, q, p, p_rec, n, lr=0.5, cutoff = True)
 
 fig, axs = plt.subplots(1, 2, figsize=(12, 6))
 
@@ -31,4 +35,5 @@ fig.colorbar(im2, ax=axs[1])
 
 # Zeige die Figur
 plt.tight_layout()
+plt.savefig(os.path.join(save_dir, "figure.png"))
 plt.show()

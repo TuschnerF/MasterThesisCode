@@ -8,10 +8,10 @@ b = 0.3
 # phi = 0.0
 cx = 0
 cy = 0
-q = 200
-p = 500
+q = 100
+p = 200
 n = 1500 # regularization parameter
-p_rec = 301
+p_rec = 101
 
 orig = draw_ellipse(a, b, cx, cy, p) 
 sinogram = projellipse(a, b, cx, cy, q, p)

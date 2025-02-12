@@ -206,7 +206,15 @@ def kernel_4_11(s_values,n):
             res[i] = -tmp*hyp2f1(1, 3/2, n+2, 1/(s*s))/(s*s)
     return res
 
-def filtered_backprojection_paralell(sinogramm, q, p, p_rec, n, lr = 1.0, la = 0.0):
+def filter(sinogramm, q, p, n):
+    eta = np.zeros_like(sinogramm)
+    v_gamma = kernel_4_11(np.linspace(-2*q,2*q,4*q+1)/q, n)
+    for j in range(p):
+       for k in range(2*q+1):
+           for l in range(2*q+1):
+               eta[j,k] += 1/q * ( v_gamma[k-l+2*q] * sinogramm[j,l] )
+
+def filtered_backprojection_paralell(sinogramm, q, p, p_rec, n, lr = 1.0, la = 0.0, cutoff = False):
     """
     Algrorithm 4.16
 
@@ -227,6 +235,8 @@ def filtered_backprojection_paralell(sinogramm, q, p, p_rec, n, lr = 1.0, la = 0
         limited radius
     la : floor
         limited angle
+    cutoff: bool
+        if enabled use a smooth cutoff function
 
     Returns:
     res : numpy.ndarray
@@ -240,6 +250,12 @@ def filtered_backprojection_paralell(sinogramm, q, p, p_rec, n, lr = 1.0, la = 0
         for j in range(2*q+1):
             if abs((j-q)/q)>=lr:
                 sinogramm[:,j] = 0
+        if cutoff == True:
+            lr_ = lr-0.1
+            for j in range(2*q+1):
+                r = abs((j-q)/q)
+                if r>=lr_ and r<=lr:
+                    sinogramm[:,j] *= r / (lr_-lr) - lr / ( lr_-lr )
     if la>0.0 and la<=np.pi:
         print("Limited angle with |alpha|<=", la)
         for j in range(p):
@@ -254,7 +270,7 @@ def filtered_backprojection_paralell(sinogramm, q, p, p_rec, n, lr = 1.0, la = 0
     for j in range(p):
        for k in range(2*q+1):
            for l in range(2*q+1):
-               eta[j,k] += 1/q * ( v_gamma[k-l+2*q] * sinogramm[j,l] ) # Indizes überprüfen!
+               eta[j,k] += 1/q * ( v_gamma[k-l+2*q] * sinogramm[j,l] )
     end_filter = time.perf_counter()
 
 
