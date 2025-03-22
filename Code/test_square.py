@@ -3,7 +3,7 @@ from problems.problem_lap import *
 import numpy as np
 import matplotlib.pyplot as plt
 import os
-from source.run import *
+from run import *
 # save_dir = "Data"  # Define the directory
 # os.makedirs(save_dir, exist_ok=True) 
 

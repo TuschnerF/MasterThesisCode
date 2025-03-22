@@ -206,6 +206,33 @@ def kernel_4_11(s_values,n):
             res[i] = -tmp*hyp2f1(1, 3/2, n+2, 1/(s*s))/(s*s)
     return res
 
+def shepp_logan_filter(s_values,n):
+    """
+    Calculate Kernel for Shepp logan filter
+
+    Parameters:
+    s_values : np.ndarray
+    n : int
+        regularization parameter, n = 1/gamma    NOT NEEDED
+
+    Returns:
+    res : nd.array 
+    """
+    res = np.zeros_like(s_values)
+    q = 0
+    if (len(s_values)-1) % 4 == 0:
+        q = (len(s_values)-1) // 4
+    else:
+        print("Wrong dimension in shepp-logan-filter")
+    center = 2*q
+    res[center]=2*q*q*np.pi*np.pi
+    for x in range(2*q+1):
+        res[center+x] = res[center] / (1-4*(x+1)*(x+1))
+        res[center-x] = res[center+x]
+    return res * (-1)
+    
+
+
 def filter(sinogramm, q, p, n, lr = 1.0, la = 0.0,  cutoff = False):
     # S0: Limited angle / radius
     if lr>=0.0 and lr<1.0:
@@ -227,7 +254,8 @@ def filter(sinogramm, q, p, n, lr = 1.0, la = 0.0,  cutoff = False):
     # S1:   Calculate Filter
     print("S1: Calculation of reconstruction filter")
     eta = np.zeros_like(sinogramm)
-    v_gamma = kernel_4_11(np.linspace(-2*q,2*q,4*q+1)/q, n)
+    # v_gamma = kernel_4_11(np.linspace(-2*q,2*q,4*q+1)/q, n)
+    v_gamma = shepp_logan_filter(np.linspace(-2*q,2*q,4*q+1)/q, n)
     for j in range(p):
        for k in range(2*q+1):
            for l in range(2*q+1):
@@ -264,7 +292,6 @@ def filtered_backprojection_paralell(eta, q, p, p_rec):
         shape [p_rec p_rec]
     """
     #Assert correct shape of sinogramm
-
     # S2:   Calculate reconstruction
     print("S2: Reconstruction for ", p_rec*p_rec, " points")
     res = np.zeros((p_rec,p_rec))
