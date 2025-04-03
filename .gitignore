@@ -1,2 +1,5 @@
 *.pyc
-\Code\Data\
+\Code\Data\ROI
+*.svg
+*.txt
+*.png
