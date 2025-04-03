@@ -15,7 +15,7 @@ p_rec = 101
 
 orig = draw_ellipse(a, b, cx, cy, p) 
 sinogram = projellipse(a, b, cx, cy, q, p)
-reconstruction = filtered_backprojection_paralell(sinogram, q, p, p_rec, n , la=np.pi/4)
+reconstruction = filtered_backprojection_paralell(sinogram, q, p, p_rec, n)
 
 fig, axs = plt.subplots(1, 2, figsize=(12, 6))
 

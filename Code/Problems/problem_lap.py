@@ -9,6 +9,10 @@ from scipy.special import hyp2f1
 from  problems.problem import Problem
 import math
 import time
+from rich.progress import Progress
+from multiprocessing import Pool
+from tqdm import tqdm
+from joblib import Parallel, delayed
 
 class Problem_LAP(Problem):
     # Constructor
@@ -41,7 +45,7 @@ def draw_rectangle(ur, vr, phi, cx, cy, p):
     dim = 2 * p + 1
     h = 1 / p
 
-    rect = np.zeros((dim, dim), dtype=int)
+    rect = np.zeros((dim, dim))
 
     # Rotation matrix components
     c = np.cos(phi)
@@ -79,7 +83,7 @@ def draw_ellipse(a, b, cx, cy, p):
     """
     dim = 2 * p + 1
     h = 1 / p
-    ellipse = np.zeros((dim, dim), dtype=int)
+    ellipse = np.zeros((dim, dim))
 
     for i in range(0, 2 * p + 1):
         x = -1 + i * h - cx  # x-coordinate in the grid
@@ -201,10 +205,10 @@ def kernel_4_11(s_values,n):
     tmp = 2*np.pi*np.pi
     for i, s in enumerate(s_values):
         if np.abs(s) <= 1:
-            res[i] = tmp*2*(n+1)*hyp2f1(1,-n,1/2, s**2)
+            res[i] = 2*(n+1)*hyp2f1(1,-n,1/2, s**2)
         else:
-            res[i] = -tmp*hyp2f1(1, 3/2, n+2, 1/(s*s))/(s*s)
-    return res
+            res[i] = -hyp2f1(1, 3/2, n+2, 1/(s*s))/(s*s)
+    return res / tmp
 
 def shepp_logan_filter(s_values,n):
     """
@@ -225,13 +229,21 @@ def shepp_logan_filter(s_values,n):
     else:
         print("Wrong dimension in shepp-logan-filter")
     center = 2*q
-    res[center]=2*q*q*np.pi*np.pi
+    res[center]=2*(q*np.pi)**2
     for x in range(2*q+1):
         res[center+x] = res[center] / (1-4*(x+1)*(x+1))
         res[center-x] = res[center+x]
-    return res * (-1)
+    return res *(-1)
     
-
+def draw_roi(orig, lr):
+    p,q = orig.shape
+    for i in range(0, p):
+        x = -1 + i * (2 / p)   # x-coordinate in the grid
+        for j in range(0, p):
+            y = -1 + j * (2 / p)  # y-coordinate in the grid
+            if (np.sqrt(x*x + y*y) <= lr+0.005) and (np.sqrt(x*x + y*y) >= lr-0.005):
+                orig[j,i] = 0.5
+    return orig    
 
 def filter(sinogramm, q, p, n, lr = 1.0, la = 0.0,  cutoff = False):
     # S0: Limited angle / radius
@@ -306,6 +318,65 @@ def filtered_backprojection_paralell(eta, q, p, p_rec):
                     k = math.floor(t)
                     rho = t-k
                     res[x1,x2] += (np.pi / p) * ( (1-rho)*eta[j,k+q] + rho*eta[j,k+1+q])
+    # norm to max value 1
+    res *= 1 / (np.max(res))                
+    return res
+
+
+def filtered_backprojection_paralell_paralell(eta, q, p, p_rec):
+    """
+    Algrorithm 4.16
+
+    Parameters:
+    sinogram : numpy.ndarray
+        Sinogramm of indicator function for rectamgle
+        shape [p 2*q+1], integal(j,i)=integral along line ( (i-q)/q,j*pi/p)
+    
+    p : int
+        Discretization parameter in angle.
+    q : int
+        Discretization parameter in s-direction
+    p_rec:  int
+        Discretization parameter for reconstruction picture
+    n : int
+        regularization parameter
+    lr : floor
+        limited radius
+    la : floor
+        limited angle
+    cutoff: bool
+        if enabled use a smooth cutoff function
+
+    Returns:
+    res : numpy.ndarray
+        reconstructed Picture
+        shape [p_rec p_rec]
+    """
+    #Assert correct shape of sinogramm
+    # S2:   Calculate reconstruction
+    print("S2: Reconstruction for ", p_rec*p_rec, " points")
+    res = np.zeros((p_rec,p_rec))
+    
+    def process_pixel(x1):
+        row_result = np.zeros(p_rec)
+        for x2 in range(p_rec):
+            x = [ 2*x1/(p_rec-1) - 1, 2*x2/(p_rec-1) - 1]
+            if np.sqrt(x[0]**2+x[1]**2)<1: 
+                for j in range(p):
+                    # omega = [np.cos(j*np.pi/p),np.sin(j*np.pi/p)]
+                    t = (2*x1/(p_rec-1) - 1)*np.sin(j*np.pi/p) + (2*x2/(p_rec-1) - 1)*-np.cos(j*np.pi/p)
+                    t *= q
+                    k = math.floor(t)
+                    rho = t-k
+                    row_result[x2] += (np.pi / p) * ( (1-rho)*eta[j,k+q] + rho*eta[j,k+1+q])
+        return row_result
+    with Progress() as progress:
+        task = progress.add_task("[cyan]Processing...", total=p_rec)
+        results = Parallel(n_jobs=-1)(delayed(process_pixel)(x1) for x1 in range(p_rec))
+        for x1, row in enumerate(results):
+            res[x1, :] = row
+            progress.update(task, advance=1)
+    
     # norm to max value 1
     res *= 1 / (np.max(res))                
     return res
