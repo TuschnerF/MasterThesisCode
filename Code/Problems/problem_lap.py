@@ -253,16 +253,25 @@ def filter(sinogramm, q, p, n, lr = 1.0, la = 0.0,  cutoff = False):
             if abs((j-q)/q)>=lr:
                 sinogramm[:,j] = 0
         if cutoff == True:
-            lr_ = lr-0.1
+            eps = lr/5
             for j in range(2*q+1):
                 r = abs((j-q)/q)
-                if r>=lr_ and r<=lr:
-                    sinogramm[:,j] *= r / (lr_-lr) - lr / ( lr_-lr )
+                if r>=lr-eps and r<=lr:
+                    # print("r = "+ r +"  cutoff = "+ cut_off_function(-lr+eps+np.abs(r),eps))
+                    sinogramm[:,j] *= cut_off_function(-lr+eps+np.abs(r),eps)
     if la>0.0 and la<=np.pi:
         print("Limited angle with |alpha|<=", la)
         for j in range(p):
             if j*np.pi/p<= la or j*np.pi/p>=np.pi-la:
                 sinogramm[j,:] = 0
+            if cutoff == True:
+                phi=j*np.pi/p
+                eps = (np.pi-2*la)/3
+                if la< phi and phi < la+eps:
+                    sinogramm[:,j] *= cut_off_function(la+eps-phi, eps)
+                if np.pi-la-eps < phi and phi < np.pi-la:
+                    sinogramm[:,j] *= cut_off_function(phi+la-np.pi+eps, eps)
+        
     # S1:   Calculate Filter
     print("S1: Calculation of reconstruction filter")
     eta = np.zeros_like(sinogramm)
@@ -380,3 +389,7 @@ def filtered_backprojection_paralell_paralell(eta, q, p, p_rec):
     # norm to max value 1
     res *= 1 / (np.max(res))                
     return res
+
+def cut_off_function(x,eps):
+    v_eps = np.exp(x**2/(x**2-eps**2))
+    return v_eps
