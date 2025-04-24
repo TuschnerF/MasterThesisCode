@@ -136,10 +136,10 @@ def adjoint_imaging_operator_parallel_2(radon, p, q, p_rec) -> np.ndarray:
             y1 = 2 * x1 / p_rec - 1
             y2 = 2 * x2 / p_rec - 1
             if np.sqrt(y1**2 + y2**2) <= 1:
-                for i, phi in enumerate(angles):
-                    r = np.sqrt((y1 + np.cos(phi))**2 + (y2 - np.sin(phi))**2)
+                for phi_idx, phi in enumerate(angles):
+                    r = np.sqrt((y1 + np.sin(phi))**2 + (y2 - np.cos(phi))**2)
                     if r != 0 and r <= 2:
-                        phi_idx = i / (p - 1) * (p - 1)
+                        # phi_idx = i / (p - 1) * (p - 1)
                         r_idx = r / 2 * (q - 1)
                         g_int = map_coordinates(radon, [[phi_idx], [r_idx]], order=1, mode='nearest')[0]
                         row_result[x2] += 1 / (2*np.pi*r) * g_int * dphi
@@ -223,3 +223,7 @@ def draw_ellipse(a, b, cx, cy, p):
             if (x*x/(a*a) + y*y/(b*b)) <= 1:
                 ellipse[j,i] = 1        
     return ellipse
+
+def cut_off_function(x,eps):
+    v_eps = np.exp(x**2/(x**2-eps**2))
+    return v_eps
