@@ -38,4 +38,4 @@ from run import *
 # plt.savefig(os.path.join(save_dir, "figure.png"))
 # plt.show()
 
-run_loop_rectangle(lr = 0.5)
+run_loop_rectangle(la = np.pi/4)

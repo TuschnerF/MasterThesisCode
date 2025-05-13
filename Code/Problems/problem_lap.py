@@ -235,14 +235,14 @@ def shepp_logan_filter(s_values,n):
         res[center-x] = res[center+x]
     return res *(-1)
     
-def draw_roi(orig, lr):
+def draw_roi(orig, lr, value = 0.5):
     p,q = orig.shape
     for i in range(0, p):
         x = -1 + i * (2 / p)   # x-coordinate in the grid
         for j in range(0, p):
             y = -1 + j * (2 / p)  # y-coordinate in the grid
             if (np.sqrt(x*x + y*y) <= lr+0.005) and (np.sqrt(x*x + y*y) >= lr-0.005):
-                orig[j,i] = 0.5
+                orig[j,i] = value
     return orig    
 
 def filter(sinogramm, q, p, n, lr = 1.0, la = 0.0,  cutoff = False):

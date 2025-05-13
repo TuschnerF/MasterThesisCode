@@ -27,13 +27,13 @@ print("Sinogramm done", end_reconstruction-start_reconstruction)
 
 
 # -------------------------------- Plotten --------------------------------
-fig, axs = plt.subplots(1, 2, figsize=(10, 8))
-im1 = axs[0].imshow(orig, extent=[-1, 1, -1, 1], aspect='auto', cmap='gray_r', origin='upper')
+fig, axs = plt.subplots(1, 2)
+im1 = axs[0].imshow(orig, extent=[-1, 1, -1, 1], aspect='auto', cmap='turbo', origin='upper')
 axs[0].set_title('Original Image')
 axs[0].set_aspect('equal')
 fig.colorbar(im1, ax=axs[0])
 
-im2 = axs[1].imshow(reconstruction_filtered, extent=[-1, 1, -1, 1], aspect='auto', cmap='gray_r', origin='upper')
+im2 = axs[1].imshow(reconstruction_filtered[4:,4:], extent=[-1, 1, -1, 1], aspect='auto', cmap='turbo', origin='upper')
 axs[1].set_title('Reconstruction')
 axs[1].set_aspect('equal')
 fig.colorbar(im2, ax=axs[1])

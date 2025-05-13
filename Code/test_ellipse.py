@@ -9,7 +9,7 @@ b = 0.3
 cx = 0
 cy = 0
 q = 100
-p = 200
+p = 500
 n = 1500 # regularization parameter
 p_rec = 101
 

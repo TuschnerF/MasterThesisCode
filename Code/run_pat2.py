@@ -17,9 +17,9 @@ def write_output_file(id, safe_dir, variables, calc_filter_time, calc_rec_time):
 
 # q=500
 # p=500
-p_rec=500
-p = 2000
-q = 250
+p_rec=1000
+p = 100
+q = 100
 cutoff = True
 orig = draw_ellipse(0.2, 0.2, 0.0, 0.0, 1000) 
 a = 0
@@ -59,14 +59,14 @@ calc_rec_time = end_reconstruction-start_reconstruction
 
 
 # -------------------------------- Plotten --------------------------------
-fig, axs = plt.subplots(1, 2, figsize=(10, 8))
+fig, axs = plt.subplots(1, 2, figsize=(12, 6))
 im1 = axs[0].imshow(orig, extent=[-1, 1, -1, 1], aspect='auto', cmap='gray_r', origin='upper')
-axs[0].set_title('Original Image')
+axs[0].set_title('Originalbild')
 axs[0].set_aspect('equal')
 # fig.colorbar(im1, ax=axs[0])
 
 im2 = axs[1].imshow(reconstruction, extent=[-1, 1, -1, 1], aspect='auto', cmap='gray_r', origin='upper')
-axs[1].set_title('Reconstruction from filtered Data 0-pi')
+axs[1].set_title('Rekonstruktion')
 axs[1].set_aspect('equal')
 # fig.colorbar(im2, ax=axs[1])
 
@@ -80,9 +80,8 @@ plt.tight_layout()
 if save == True:
     id = datetime.now().strftime("%Y%m%d_%H%M%S")
     write_output_file(id, safe_dir,  [["Typ", "Ellipse(0.2,0.2)"], ["a",a], ["b",b], ["q",q], ["p",p], ["p_rec",p_rec]], calc_filter_time, calc_rec_time)
-    plt.savefig(os.path.join(safe_dir, str(id)+"_figure.svg"))
+    plt.savefig(os.path.join(safe_dir, str(id)+"_figure.svg"), bbox_inches='tight')
     np.save(os.path.join(safe_dir, str(id)+"original"), orig)
     np.save(os.path.join(safe_dir, str(id)+"_reconstruction"), reconstruction)
                                       
-
 plt.show()
