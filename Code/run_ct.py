@@ -1,4 +1,4 @@
-from problems.problem_lap import *
+from problems.problem_ct import *
 import matplotlib.pyplot as plt
 import numpy as np
 import os
@@ -15,15 +15,15 @@ def write_output_file(id, safe_dir, variables, calc_filter_time, calc_rec_time):
 
 def run_loop_rectangle( lr = 1.0, la = 0.0,  cutoff = True):
     id = 0
-    ur_list = [0.2]
+    ur_list = [0.5]
     vr_list = [0.2]
     phi_list = [0]
-    cx_list = [0.3]
-    cy_list = [0.4]
-    q_list = [500] #300
-    p_list = [500] #300
+    cx_list = [0.0]
+    cy_list = [0.0]
+    q_list = [300] #300
+    p_list = [300] #300
     n_list = [1500]
-    p_rec_list = [1000]
+    p_rec_list = [300]
     save = True
 
     safe_dir = ""
@@ -85,24 +85,25 @@ def run_loop_rectangle( lr = 1.0, la = 0.0,  cutoff = True):
                                         print("Calculation Filter:", calc_filter_time)
                                         print("Calculation Reconstruction:", calc_rec_time)
 
-def run_loop_ellipse( lr = 1.0, la = 0.0,  cutoff = True):
+def run_ellipse( lr = 1.0, la = 0.0,  cutoff = True):
     id = 0
-    a = 0.2
-    b = 0.2
+    a = 0.25
+    b = 0.25
     cx = 0.0
     cy = 0.0
-    q = 500 #300
-    p = 500 #300
+    q = 100 #300
+    p = 100 #300
     n = 1500
-    p_rec = 1000
-    save = True
+    p_rec = 500
+    save = False
 
     safe_dir = ""
-    if lr != 1.0:
-        safe_dir = "Data/ROI"
-    if la != 0.0:
-        safe_dir = "Data/LA"
-    os.makedirs(safe_dir, exist_ok=True)
+    if save == True:
+        if lr != 1.0:
+            safe_dir = "Data/ROI"
+        if la != 0.0:
+            safe_dir = "Data/LA"
+        os.makedirs(safe_dir, exist_ok=True)
 
     orig = draw_ellipse(a, b, cx, cy, 1000) 
     # if lr != 1.0:
@@ -147,5 +148,5 @@ def run_loop_ellipse( lr = 1.0, la = 0.0,  cutoff = True):
     print("Calculation Filter:", calc_filter_time)
     print("Calculation Reconstruction:", calc_rec_time)
 
-run_loop_rectangle(lr=0.5, cutoff=False)
-# run_loop_ellipse(la=np.pi/4, cutoff=False)
+# run_loop_rectangle(la=np.pi/4, cutoff=False)
+run_ellipse(la=np.pi/4, cutoff=False)

@@ -12,10 +12,21 @@ from tqdm import tqdm
 from joblib import Parallel, delayed
 
 def imaging_operator(image, p, q) -> NDArray:
-    # Implementation of the circular mean Radon transform
-    # image: 2D image
-    # angles: Array with all phi for points on the sphere: Theta(phi)
-    # radii: Array of all r for all circles
+    '''
+    Implementation of the circular mean Radon transform
+
+    Parameters:
+    image: numpy.ndarray 
+        2D image
+    q: int
+        number of different radii
+    p: int
+        number of different angles
+
+    Returns:
+    radon : numpy.ndarray
+        radondata for angles and radii
+    '''
     angles = np.linspace(0,2*np.pi, p, endpoint=False)
     radii = np.linspace(0,2,q, endpoint=False)
     radon = np.zeros((len(angles), len(radii)))
@@ -23,22 +34,44 @@ def imaging_operator(image, p, q) -> NDArray:
     if rows != columns:
         raise ValueError("Image not quadratic")
     
-    n_points_circle = 360
-    for i,phi in enumerate(angles):
+    n_points_circle = 1000
+    for i, phi in enumerate(angles):
         for j, r in enumerate(radii):
             psi = np.linspace(0, 2*np.pi, n_points_circle, endpoint=False)
             x_circle = (1 + np.cos(phi) + r*np.cos(psi)) * columns / 2
             y_circle = (1 - np.sin(phi) - r*np.sin(psi)) * rows / 2
             
+            x_norm = (x_circle) / (columns / 2) - 1
+            y_norm = (y_circle) / (rows / 2) -1
+            mask = x_norm**2 + y_norm**2 <= 1
+            mask_ = x_norm**2 + y_norm**2
+            # print(mask_)
+            indices = np.where(mask)[0]
+            
             # bilinear interpolation of the x,y values in the image
             sampled_values = map_coordinates(image, [y_circle, x_circle], order=1, mode='constant')
             
-            # Compute the average value over the sampled points (arc length measure)    	
-            radon[i, j] = np.mean(sampled_values)
+            # Compute the average value over the sampled points (arc length measure)
+            tmp = 2*np.acos(r/2) / (2*np.pi)    	
+            radon[i, j] = np.mean(sampled_values[indices]) *tmp
+            if np.isnan(radon[i, j]):
+                radon[i, j] = 0
+            # radon[i, j] = np.mean(sampled_values)
+            # print(np.mean(sampled_values), " " , np.mean(sampled_values[indices]) )
+            # print(indices)
     radon = diff_operator_radial(radon)
     return radon
 
 def diff_operator_radial(radon) -> NDArray:
+    '''
+    approximation of the second derivative w.r.p. to the radius of radon data 
+
+    Parameters:
+        radon: numpy.ndarray 
+
+    Returns:
+        dr_radon : numpy.ndarray (2q+1,p)
+    '''
     dr_radon = radon.copy()
     P,Q = np.shape(radon)
     h = 2/Q
@@ -52,19 +85,19 @@ def diff_operator_radial(radon) -> NDArray:
 
 def adjoint_imaging_operator(radon, p, q, p_rec) -> NDArray:
     """
-    Berechnet den adjungierten Operator M* der zirkulären Mittel-Radon-Transformation.
+    calculation of the adjoint operator of the circular mean radon transform
     
     Parameter:
         radon : NDArray
-            2D-Datenarray der Radon-Messwerte, Form (len(angles), len(radii)).
-        angles : NDArray
-            Array der Winkel phi, über die die Kreise definiert sind.
-        radii : NDArray
-            Array der Radien der Kreise.
+            radon data
+        p : int
+            number of angles 
+        q : int
+            number of radii
     
-    Rückgabe:
+    Returns:
         image : NDArray
-            Das rekonstruierte Bild (als Rückprojektion von M*).
+            backprojection M^*(radon)
     """
     angles = np.linspace(0,2*np.pi, p)
     # interpolator = RegularGridInterpolator((angles, radii), radon, bounds_error=False, fill_value=None)
@@ -90,41 +123,24 @@ def adjoint_imaging_operator(radon, p, q, p_rec) -> NDArray:
             # print("Progress reconstruction: ", x1/p_rec*100, "%")
     return result / (np.max(np.abs(result))) 
 
-def compute_pixel(args):
-    """ Berechnet den adjungierten Operator für ein einzelnes Pixel (x1, x2). """
-    radon, angles, p, q, p_rec, dphi, x1, x2 = args
-    y1 = 2*x1 / p_rec - 1
-    y2 = 2*x2 / p_rec - 1
-    result_value = 0
+def adjoint_imaging_operator_parallel(radon, p, q, p_rec) -> np.ndarray:
+    '''
+    paralellized calculation of the adjoint operator of the circular mean radon transform
 
-    if np.sqrt(y1**2 + y2**2) <= 1:
-        for i, phi in enumerate(angles):
-            r = np.sqrt((y1 - np.cos(phi))**2 + (y2 - np.sin(phi))**2)
-            if r != 0 and r <= 2:
-                phi_idx = i / (p - 1) * (p - 1)
-                r_idx = r / 2 * (q - 1)
-                g_int = map_coordinates(radon, [[phi_idx], [r_idx]], order=1, mode='nearest')[0]
-                result_value += 1 / (2*np.pi*r) * g_int * dphi
+    Parameters:
+        radon: numpy.ndarray 
+            radon data
+        q: int
+            number of different radii
+        p: int
+            number of different angles
+        p_rec : int
+            number of pixels for reconstruction
 
-    return (x1, x2, result_value)
-
-def adjoint_imaging_operator_parallel(radon, p, q, p_rec):
-    angles = np.linspace(0, 2*np.pi, p, endpoint=False)
-    dphi = (2 * np.pi) / p
-    result = np.zeros((p_rec, p_rec))
-
-    # Liste aller Argumente für `compute_pixel`
-    args_list = [(radon, angles, p, q, p_rec, dphi, x1, x2) 
-                 for x1 in range(p_rec) for x2 in range(p_rec)]
-
-    # Parallel rechnen mit multiprocessing
-    with Pool() as pool:
-        for x1, x2, value in tqdm(pool.imap_unordered(compute_pixel, args_list), total=len(args_list), desc="Processing"):
-            result[x1, x2] = value
-
-    return result / np.max(result)
-
-def adjoint_imaging_operator_parallel_2(radon, p, q, p_rec) -> np.ndarray:
+    Returns:
+        result : numpy.ndarray
+            reconstruction for pixels
+    '''
     angles = np.linspace(0, 2*np.pi, p)
     radii = np.linspace(0, 2, q)
     result = np.zeros((p_rec, p_rec))
@@ -159,19 +175,19 @@ def draw_rectangle(ur, vr, phi, cx, cy, p):
     Characteristic function of a rectangle in [-1, 1]^2.
 
     Parameters:
-    ur, vr : float
-        Half side lengths of the rectangle.
-    phi : float
-        Rotation angle in radians.
-    cx, cy : float
-        Center coordinates of the rectangle.
-    p : int
-        Discretization parameter.
+        ur, vr : float
+            Half side lengths of the rectangle.
+        phi : float
+            Rotation angle in radians.
+        cx, cy : float
+            Center coordinates of the rectangle.
+        p : int
+            Discretization parameter.
 
     Returns:
-    rect : numpy.ndarray
-        A 2D binary array representing the digitized characteristic function
-        of the rectangle with shape (2*p+1, 2*p+1).
+        rect : numpy.ndarray
+            A 2D binary array representing the digitized characteristic function
+            of the rectangle with shape (2*p+1, 2*p+1).
     """
     dim = 2 * p + 1
     h = 1 / p
@@ -199,18 +215,18 @@ def draw_rectangle(ur, vr, phi, cx, cy, p):
 
 def draw_ellipse(a, b, cx, cy, p):
     """
-    Characteristic function of a rectangle in [-1, 1]^2.
+    Characteristic function of an ellipse.
 
     Parameters:
-    a,b : floar
-        ellipse parameter
-    p : int
-        Discretization parameter.
+        a,b : floar
+            ellipse parameter
+        p : int
+            discretization parameter
 
     Returns:
-    rect : numpy.ndarray
-        A 2D binary array representing the digitized characteristic function
-        of the rectangle with shape (2*p+1, 2*p+1).
+        rect : numpy.ndarray
+            A 2D binary array representing the digitized characteristic function
+            of the rectangle with shape (2*p+1, 2*p+1).
     """
     dim = 2 * p + 1
     h = 1 / p

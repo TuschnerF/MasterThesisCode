@@ -1,7 +1,7 @@
 from skimage.data import shepp_logan_phantom
 import matplotlib.pyplot as plt
 from skimage.transform import resize
-from problems.problem_lap import *
+from problems.problem_ct import *
 import numpy as np
 import os
 from datetime import datetime

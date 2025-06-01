@@ -6,7 +6,6 @@ from numpy.typing import NDArray
 import matplotlib.pyplot as plt
 from scipy.ndimage import map_coordinates
 from scipy.special import hyp2f1
-from  problems.problem import Problem
 import math
 import time
 from rich.progress import Progress
@@ -14,14 +13,46 @@ from multiprocessing import Pool
 from tqdm import tqdm
 from joblib import Parallel, delayed
 
-class Problem_LAP(Problem):
-    # Constructor
-    def __init__(self):
-        pass
-    
-    def imaging_operator(self, image: NDArray, angles : NDArray, radii) -> NDArray:
-        pass
+def imaging_operator(image, p, q) -> NDArray:
+    '''
+    Implementation of the Radon transform of an 2d image
 
+    Parameters:
+        image: numpy.ndarray 
+            2D image
+        p: int
+            number of different angles
+        q: int
+            number of different radii
+
+    Returns:
+    radon : numpy.ndarray (2q+1,p)
+        radondata for angles and radii
+    '''
+    angles = np.linspace(0,np.pi, p, endpoint=False)
+    radii = np.linspace(1,-1,2*q+1, endpoint=True)
+    radon = np.zeros((len(angles), len(radii)))
+    rows, columns = image.shape
+    if rows != columns:
+        raise ValueError("Image not quadratic")
+    
+    n_points_line = 1000
+    for i, theta in enumerate(angles):
+        for j, s in enumerate(radii):
+            Ts = np.sqrt(1-s*s)
+            r = np.linspace(-Ts, Ts, n_points_line, endpoint=False)
+            x_circle = (1 + s*np.cos(theta) - r*np.sin(theta)) * columns / 2
+            y_circle = (1 - s*np.sin(theta) - r*np.cos(theta)) * rows / 2
+            
+            # bilinear interpolation of the x,y values in the image
+            sampled_values = map_coordinates(image, [y_circle, x_circle], order=1, mode='constant')
+            
+            # Compute the average value over the sampled points (arc length measure)    	
+            tmp = 2*Ts
+            radon[i, j] = tmp*np.mean(sampled_values)
+            if np.isnan(radon[i, j]):
+                radon[i, j] = 0
+    return radon
 
 def draw_rectangle(ur, vr, phi, cx, cy, p):
     """
@@ -95,7 +126,7 @@ def draw_ellipse(a, b, cx, cy, p):
 
 def projrec(ur,vr,phi,cx,cy,q,p):
     """
-    Projection of a rectangle.
+    Radon-Transformation of a rectangle.
 
     Parameters:
     ur, vr : float
@@ -161,7 +192,7 @@ def projrec(ur,vr,phi,cx,cy,q,p):
 
 def projellipse(a, b, cx, cy, q, p):
     """
-    Projection of a ellipse.
+    Radon transform of an ellipse.
 
     Parameters:
     a,b: floor
@@ -191,7 +222,7 @@ def projellipse(a, b, cx, cy, q, p):
 
 def kernel_4_11(s_values,n):
     """
-    Calculate Kernel v^n(s). Exmple 4.11 in Scrit Rieder
+    Calculate Kernel v^n(s). Exmple 4.11 in the lecture script "Mathematical Methods in Imaging" by A. Rieder 2014
 
     Parameters:
     s_values : np.ndarray
@@ -236,6 +267,21 @@ def shepp_logan_filter(s_values,n):
     return res *(-1)
     
 def draw_roi(orig, lr, value = 0.5):
+    """
+    adds a circle in to a picture to show the ROI
+
+    Parameters:
+    orig : numpy.ndarray
+        original picture
+    lr : float
+        limited radius
+    value : float
+        sets value of the circle-pixels
+
+    Returns:
+    orig : numpy.ndarray
+        changed original picture
+    """
     p,q = orig.shape
     for i in range(0, p):
         x = -1 + i * (2 / p)   # x-coordinate in the grid
@@ -246,6 +292,29 @@ def draw_roi(orig, lr, value = 0.5):
     return orig    
 
 def filter(sinogramm, q, p, n, lr = 1.0, la = 0.0,  cutoff = False):
+    """
+    calculates the convolution of the kernel and sinogram, while considering limited data 
+
+    Parameters:
+    sinogram : numpy.ndarray (2q+1,p)
+        sinogram
+    q : float
+        number of angles
+    p : float
+        number of radii
+    n : float
+        regularizing parameter for calculating the kernel
+    lr : float
+        limited radius
+    la : float
+        limited angle
+    cutoff : boolean
+        describes if smooth cut-off dunction is used
+
+    Returns:
+    eta : numpy.ndarray
+        filtered data
+    """
     # S0: Limited angle / radius
     if lr>=0.0 and lr<1.0:
         print("Limited radius with |r|<=", lr)
@@ -331,10 +400,9 @@ def filtered_backprojection_paralell(eta, q, p, p_rec):
     res *= 1 / (np.max(res))                
     return res
 
-
 def filtered_backprojection_paralell_paralell(eta, q, p, p_rec):
     """
-    Algrorithm 4.16
+    Algrorithm 4.16 paralellized
 
     Parameters:
     sinogram : numpy.ndarray
@@ -379,12 +447,10 @@ def filtered_backprojection_paralell_paralell(eta, q, p, p_rec):
                     rho = t-k
                     row_result[x2] += (np.pi / p) * ( (1-rho)*eta[j,k+q] + rho*eta[j,k+1+q])
         return row_result
-    with Progress() as progress:
-        task = progress.add_task("[cyan]Processing...", total=p_rec)
-        results = Parallel(n_jobs=-1)(delayed(process_pixel)(x1) for x1 in range(p_rec))
-        for x1, row in enumerate(results):
-            res[x1, :] = row
-            progress.update(task, advance=1)
+    
+    results = Parallel(n_jobs=-1)(delayed(process_pixel)(x1) for x1 in range(p_rec))
+    for x1, row in enumerate(results):
+        res[x1, :] = row
     
     # norm to max value 1
     res *= 1 / (np.max(res))                
