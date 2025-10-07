@@ -12,29 +12,20 @@ This is the code-implementation of my Master Thesis with the topic:
 ```
 
 # Code overview
-.
-├── Data/                    # Output of the reconstructions
+```
+├── Data/ # Output of the reconstructions
+│ ├── LA/
+│ ├── LAP_Phantom/
+│ ├── PAT/
+│ └── ROI/
 
-│   ├── LA/
+├── problems/ # Modules for reconstruction and data generation
+│ ├── problem_ct.py # Classic Radon transform
+│ └── problem_lap.py # Circular mean Radon transform
 
-│   ├── LAP_Phantom/
-
-│   ├── PAT/
-
-│   └── ROI/
-
-├── problems/                # 
-
-|   ├── problem_ct.py        # Functions for reconstruction and data generation for the classic Radon transform
-
-|   ├── problem_lap.py       # Functions for reconstruction and data generation for the circular mean Radon transform
-
-├── source/                  # Main scripts
-
-│   ├── make_plot.py         # Script for generating the svg-plots used in the thesis
-
-│   ├── phantom_ct.py        # Example: Reconstruction of a Head-Phantom for the Radon transform
-
-│   ├── run_ct.py            # script for running reconstruction of Radon transform for rectangles and ellipses
-
-│   ├── run_pat.py           # script fpr running reconstruction of circular mean Radon transform
+├── source/ # Main scripts
+│ ├── make_plot.py # Generate SVG plots used in the thesis
+│ ├── phantom_ct.py # Example: Reconstruction of Head Phantom (Radon transform)
+│ ├── run_ct.py # Run Radon transform reconstruction for rectangles/ellipses
+│ └── run_pat.py # Run circular mean Radon transform reconstruction
+```
