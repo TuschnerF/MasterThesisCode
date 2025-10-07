@@ -25,9 +25,9 @@ This is the code-implementation of my Master Thesis with the topic:
 
 ├── problems/                # 
 
-|   |__ problem_ct.py        # Functions for reconstruction and data generation for the classic Radon transform
+|   ├── problem_ct.py        # Functions for reconstruction and data generation for the classic Radon transform
 
-|   |__ problem_lap.py       # Functions for reconstruction and data generation for the circular mean Radon transform
+|   ├── problem_lap.py       # Functions for reconstruction and data generation for the circular mean Radon transform
 
 ├── source/                  # Main scripts
 
